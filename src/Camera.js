@@ -1,18 +1,34 @@
 // Camera
 
 import React from 'react';
-import { TouchableOpacity, StyleSheet, View, Text, Button } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, StyleSheet, View, Text, Button } from 'react-native';
 import { RNCamera } from 'react-native-camera';
 
 export default class Camera extends React.Component {
 
-  sendToVisionAPI(dataUrl, token) {    
-    fetch(`https://vision.googleapis.com/v1/images:annotate`, {
+  constructor(props) {
+    super(props);
+    this.state = {
+      working: false
+    }
+  }
+  
+  async sendToVisionAPI(dataUrl, token) {
+    // default API token
+    let visionUrl = 'https://vision.googleapis.com/v1/images:annotate'
+    let headers = {
+		    'Content-Type': 'application/json'      
+    }
+    
+    if (!token) {
+      visionUrl += '?key=AIzaSyBc7VMHDMfnsOcIZmD-YAsB9xOe5tefURI';
+    } else {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    let res = await fetch(visionUrl, {
 	    method: 'POST',
-	    headers: {
-        'Authorization': `Bearer ${token}`,
-		    'Content-Type': 'application/json'
-	    },
+	    headers: headers,
 	    body: JSON.stringify({
 		    requests: [
 		      {
@@ -31,34 +47,42 @@ export default class Camera extends React.Component {
 		      }
 		    ]
 	    })
-	  }).then( resp => {
-	    return resp.json();
-	  }).then( json => {
-      console.log(json);
-      this.props.navigation.navigate('Output', {json: json});
-    });
+	  });
+
+    let json = await res.json();
+    return json;    
   }
   
-  takePicture() {
+  async takePicture() {
     console.log('pic');
     if (this.camera) {
+      this.setState({ working: true });
+      
       const options = { quality: 0.5, base64: true };
-      this.camera.takePictureAsync(options).then( data => {        
-        console.log(Object.keys(data));
-        console.log(data.base64);
-        console.log(data.uri);        
-        let token = this.props.navigation.getParam('accessToken');
-        if (token) {
-          console.log('Sending to vision API using token ', token);
-          this.sendToVisionAPI(data.base64, token);
-        } else {
-          console.log('No token specified');
-        }
-      });
+      let data = await this.camera.takePictureAsync(options);
+      
+      console.log(Object.keys(data));
+      console.log(data.base64);
+      console.log(data.uri);        
+      let token = this.props.navigation.getParam('accessToken');
+      
+      console.log('Sending to vision API using token ', token);
+      let json = await this.sendToVisionAPI(data.base64, token);
+      console.log('successful scan from vision api, forwarding to output',json);
+
+      this.setState({ working: false });
+      this.props.navigation.navigate('Output', {json: json, token:token});    
     }
   }
   
   render() {
+    let working;
+    if (this.state.working) { 
+      working = (<ActivityIndicator style={styles.activity} size="large" color="#00ff00"/>);
+    } else {
+      working = (<View></View>);      
+    }
+
     return (
       <View style={styles.container}>
         <RNCamera
@@ -79,6 +103,9 @@ export default class Camera extends React.Component {
             <TouchableOpacity onPress={this.takePicture.bind(this)} style={styles.capture}>
               <Text style={{ fontSize: 14 }}> SNAP </Text>
             </TouchableOpacity>
+          </View>
+          <View style={{ flex: 0, flexDirection: 'row', justifyContent: 'center' }}>
+            {working}
           </View>
         </View>      
     );
@@ -109,5 +136,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignSelf: 'center',
     margin: 20,
+  },
+  activity: {
+    flex: 1,
+    position: 'absolute',
+    alignSelf: 'center',
+    bottom: 100
   },
 });
