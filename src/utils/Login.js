@@ -14,15 +14,34 @@ export default function login() {
              'https://www.googleapis.com/auth/cloud-vision',
              'https://www.googleapis.com/auth/drive.file'],
   };
-
-  return new Promise( (resolve, reject) => {
+  
+  return new Promise( async (resolve, reject) => {
     // use the client to make the auth request and receive the authState
     try {
-      authorize(config).then( result => {
-        console.log(result);
-        session['accessToken']  = result.accessToken;
-        resolve(result);        
+
+      // Authorize flow
+      let result = await authorize(config);
+      console.log(result);
+      session['accessToken']  = result.accessToken;
+      session['idToken'] = result.idToken;
+      
+      // get the user info
+      let res = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+        // retrieve user information      
+        headers: {
+          "Authorization": `Bearer ${result.accessToken}`
+        }
       });
+      let json = await res.json()
+
+      session['email'] = json.email;
+      session['name'] = json.name;
+      session['picture'] = json.picture;
+      
+      console.log(json);
+      resolve(session);
+
+      
     } catch (error) {
       console.log(error);
       reject(error);

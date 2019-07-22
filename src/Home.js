@@ -1,7 +1,7 @@
 // The home screen with login or take picture
 
 import React from 'react';
-import { View, Text, Button } from 'react-native';
+import { View, Text, Button, Image } from 'react-native';
 import login from '../src/utils/Login';
 import save from '../src/utils/Save';
 
@@ -19,7 +19,12 @@ export default class Home extends React.Component {
     this.focusListener = this.props.navigation.addListener('didFocus', () => {
       if (session.accessToken) {
         this.setState({
-          accessToken: session.accessToken
+          accessToken: session.accessToken,
+          idToken: session.idToken,
+
+          email: session.email,
+          name: session.name,
+          pic: session.picture
         });
       }
     });
@@ -29,14 +34,19 @@ export default class Home extends React.Component {
     this.focusListener.remove();
   }
   
-  login = () => {
-    login().then( (result) => {
-      // result includes accessToken, accessTokenExpirationDate and refreshToken
-      this.setState({
-        accessToken: result.accessToken,
-        idToken: result.idToken
-      });
+  login = async () => {
+    let result = await login();
+    
+    // result includes accessToken, email, name, picture
+    this.setState({
+      accessToken: result.accessToken,
+      idToken: result.idToken,
+
+      email: result.email,
+      name: result.name,
+      pic: result.picture
     });
+
   }
   
   gotoCamera = () => {
@@ -46,7 +56,13 @@ export default class Home extends React.Component {
   render() {
 
     console.log('rendering home');
-    let login = this.state['accessToken'] ? ( <View></View> ) :
+    let login = this.state['accessToken'] ?
+        (
+          <View style={{}}>
+            <Text>{this.state['name']}</Text>
+            <Image style={{width: 50, height: 50, alignSelf: 'center'}} source={{uri: this.state['pic']}}/>
+          </View>
+        ) :
         (
           <Button style={{flex: 1}} title='Login' onPress={this.login}></Button>          
         );
