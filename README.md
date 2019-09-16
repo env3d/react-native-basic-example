@@ -15,3 +15,7 @@ result text saved into the google drive.  A basic workflow:
  google drive folder (via google drive API)
  1) User can choose to scan again
 
+Below is how the app look in action, since it's running on the emulator,
+the camera screen is all black.
+
+![Scanning app in the iOS simulator](http://g.recordit.co/3tUMTJvIvO.gif)
